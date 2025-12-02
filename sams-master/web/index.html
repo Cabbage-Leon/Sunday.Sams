@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山姆会员商店 - 自动抢购系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <header class="header">
+            <h1>🛒 山姆会员商店自动抢购系统</h1>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">未运行</span>
+            </div>
+        </header>
+
+        <!-- 主要内容区域 -->
+        <div class="main-content">
+            <!-- 左侧：配置面板 -->
+            <div class="left-panel">
+                <div class="panel">
+                    <h2>⚙️ 配置参数</h2>
+                    <form id="configForm">
+                        <div class="form-group">
+                            <label for="authToken">Auth Token <span class="required">*</span></label>
+                            <input type="text" id="authToken" name="authToken" required 
+                                   placeholder="从山姆APP获取的auth-token">
+                            <small>必填：从山姆APP的HTTP请求头中获取</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="addressId">地址ID</label>
+                            <input type="text" id="addressId" name="addressId" 
+                                   placeholder="可选，不填将提示选择">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="deliveryType">配送类型</label>
+                                <select id="deliveryType" name="deliveryType">
+                                    <option value="1">极速达</option>
+                                    <option value="2" selected>全城配</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="payMethod">支付方式</label>
+                                <select id="payMethod" name="payMethod">
+                                    <option value="1" selected>微信</option>
+                                    <option value="2">支付宝</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="floorId">商品类型</label>
+                                <select id="floorId" name="floorId">
+                                    <option value="1" selected>普通商品</option>
+                                    <option value="2">全球购保税</option>
+                                    <option value="3">特殊订购自提</option>
+                                    <option value="4">大件商品</option>
+                                    <option value="5">厂家直供商品</option>
+                                    <option value="6">特殊订购商品</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="barkId">Bark通知ID</label>
+                                <input type="text" id="barkId" name="barkId" 
+                                       placeholder="可选，用于推送通知">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="longitude">经度</label>
+                                <input type="text" id="longitude" name="longitude" 
+                                       placeholder="可选">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="latitude">纬度</label>
+                                <input type="text" id="latitude" name="latitude" 
+                                       placeholder="可选">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="promotionId">优惠券ID</label>
+                            <input type="text" id="promotionId" name="promotionId" 
+                                   placeholder="多个用逗号分隔">
+                        </div>
+
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" id="deliveryFee" name="deliveryFee">
+                                仅免运费下单
+                            </label>
+                            <label>
+                                <input type="checkbox" id="isSelected" name="isSelected">
+                                仅选择已勾选商品
+                            </label>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">保存配置</button>
+                            <button type="button" id="startBtn" class="btn btn-success" disabled>开始抢购</button>
+                            <button type="button" id="stopBtn" class="btn btn-danger" disabled>停止</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 地址信息 -->
+                <div class="panel" id="addressPanel" style="display: none;">
+                    <h2>📍 收货地址</h2>
+                    <div id="addressInfo"></div>
+                </div>
+            </div>
+
+            <!-- 右侧：监控面板 -->
+            <div class="right-panel">
+                <!-- 流程步骤 -->
+                <div class="panel">
+                    <h2>📊 执行流程</h2>
+                    <div class="steps-container" id="stepsContainer">
+                        <div class="step" data-step="idle">
+                            <div class="step-icon">⏸️</div>
+                            <div class="step-content">
+                                <div class="step-title">等待开始</div>
+                                <div class="step-desc">配置参数后点击开始</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 商品列表 -->
+                <div class="panel" id="goodsPanel" style="display: none;">
+                    <h2>🛍️ 购物车商品</h2>
+                    <div id="goodsList"></div>
+                </div>
+
+                <!-- 配送时间 -->
+                <div class="panel" id="timeSlotsPanel" style="display: none;">
+                    <h2>⏰ 可用配送时间</h2>
+                    <div id="timeSlotsList"></div>
+                </div>
+
+                <!-- 订单信息 -->
+                <div class="panel" id="orderPanel" style="display: none;">
+                    <h2>✅ 订单信息</h2>
+                    <div id="orderInfo"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 日志面板 -->
+        <div class="panel log-panel">
+            <div class="log-header">
+                <h2>📝 实时日志</h2>
+                <button id="clearLogBtn" class="btn btn-small">清空日志</button>
+            </div>
+            <div class="log-container" id="logContainer"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
+
